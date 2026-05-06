@@ -1,0 +1,390 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   阿里巴巴普惠体（CDN, 通过 @font-face 注入）
+   ========================================================================== */
+@font-face {
+  font-family: 'Alibaba PuHuiTi';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-55-Regular/AlibabaPuHuiTi-3-55-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Alibaba PuHuiTi';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-65-Medium/AlibabaPuHuiTi-3-65-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Alibaba PuHuiTi';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-85-Bold/AlibabaPuHuiTi-3-85-Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Alibaba PuHuiTi';
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://puhuiti.oss-cn-hangzhou.aliyuncs.com/AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-95-ExtraBold/AlibabaPuHuiTi-3-95-ExtraBold.woff2') format('woff2');
+}
+
+/* ==========================================================================
+   全局基础
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Poppins', 'Alibaba PuHuiTi', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  @apply bg-primary-50 text-ink;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body {
+  @apply bg-night-200 text-primary-100;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* 中文字符默认走普惠体 */
+:lang(zh), :lang(zh-CN), [lang^="zh"] {
+  font-family: 'Alibaba PuHuiTi', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* 标题字体（Display） */
+h1, h2, h3 {
+  font-family: 'Righteous', 'Alibaba PuHuiTi', 'PingFang SC', sans-serif;
+  letter-spacing: 0.01em;
+}
+
+/* ==========================================================================
+   滚动条
+   ========================================================================== */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #10B981 0%, #F97316 100%);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #059669 0%, #EA580C 100%);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #34D399 0%, #FB923C 100%);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+/* 文字选中 */
+::selection { background: #F97316; color: white; }
+.dark ::selection { background: #34D399; color: #064E3B; }
+
+/* ==========================================================================
+   组件层
+   ========================================================================== */
+@layer components {
+  /* ---------- 按钮系统 ---------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-display font-medium text-base px-6 py-3 rounded-xl
+           transition-all duration-200 ease-out cursor-pointer select-none
+           border-3 border-ink whitespace-nowrap;
+  }
+  .btn:focus-visible { @apply outline-none ring-4 ring-action/40; }
+  .btn:disabled { @apply opacity-50 cursor-not-allowed; }
+  .dark .btn { @apply border-night-400; }
+
+  /* 主行动按钮（橙色 CTA） */
+  .btn-action {
+    @apply btn bg-action text-white shadow-block hover:-translate-y-1 hover:translate-x-0
+           hover:shadow-block-lg active:translate-y-0 active:translate-x-0 active:shadow-block-sm;
+  }
+  .dark .btn-action {
+    @apply shadow-block-dark hover:shadow-block-dark active:shadow-block-dark;
+  }
+
+  /* 主色按钮（绿） */
+  .btn-primary {
+    @apply btn bg-primary-600 text-white shadow-block hover:-translate-y-1 hover:shadow-block-lg
+           active:translate-y-0 active:shadow-block-sm;
+  }
+  .dark .btn-primary {
+    @apply bg-primary-500 shadow-block-dark hover:shadow-block-dark active:shadow-block-dark;
+  }
+
+  /* 次按钮（白底/深底） */
+  .btn-secondary {
+    @apply btn bg-white text-ink shadow-block hover:-translate-y-1 hover:shadow-block-lg
+           active:translate-y-0 active:shadow-block-sm;
+  }
+  .dark .btn-secondary {
+    @apply bg-night-100 text-primary-100 shadow-block-dark hover:shadow-block-dark active:shadow-block-dark;
+  }
+
+  /* 幽灵按钮（无边框、无阴影） */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 font-medium px-4 py-2 rounded-lg
+           text-ink hover:bg-primary-100 transition-colors duration-200 cursor-pointer;
+  }
+  .dark .btn-ghost {
+    @apply text-primary-100 hover:bg-night-100;
+  }
+
+  /* 图标按钮 */
+  .btn-icon {
+    @apply inline-flex items-center justify-center w-10 h-10 rounded-lg
+           bg-white border-3 border-ink shadow-block-sm
+           hover:-translate-y-0.5 hover:shadow-block transition-all duration-200 cursor-pointer;
+  }
+  .dark .btn-icon {
+    @apply bg-night-100 border-night-400 shadow-block-dark text-primary-100;
+  }
+
+  /* 危险按钮 */
+  .btn-danger {
+    @apply btn bg-pop-rose text-white shadow-block hover:-translate-y-1 hover:shadow-block-lg
+           active:translate-y-0 active:shadow-block-sm;
+  }
+
+  /* ---------- 卡片系统（块状布局核心） ---------- */
+  .card-block {
+    @apply bg-white border-3 border-ink rounded-2xl shadow-block transition-all duration-200 ease-out;
+  }
+  .card-block:hover {
+    @apply -translate-y-1 shadow-block-lg;
+  }
+  .dark .card-block {
+    @apply bg-night-100 border-night-400 shadow-block-dark;
+  }
+
+  .card-flat {
+    @apply bg-white border-3 border-ink rounded-2xl;
+  }
+  .dark .card-flat {
+    @apply bg-night-100 border-night-400;
+  }
+
+  .card-pop {
+    @apply rounded-2xl border-3 border-ink p-6 shadow-block transition-all duration-200;
+  }
+  .dark .card-pop {
+    @apply border-night-400 shadow-block-dark;
+  }
+
+  /* ---------- 输入框 ---------- */
+  .input-block {
+    @apply w-full px-4 py-3 rounded-xl border-3 border-ink bg-white text-ink font-sans
+           placeholder:text-ink-muted/60
+           focus:outline-none focus:ring-4 focus:ring-action/30 focus:border-action
+           transition-all duration-200;
+  }
+  .dark .input-block {
+    @apply bg-night-200 border-night-400 text-primary-100 placeholder:text-primary-100/40
+           focus:border-action focus:ring-action/30;
+  }
+
+  .label-block {
+    @apply block text-sm font-display font-medium text-ink mb-2 tracking-wide;
+  }
+  .dark .label-block { @apply text-primary-200; }
+
+  /* ---------- Tab ---------- */
+  .tab-block {
+    @apply flex items-center gap-2 px-5 py-2.5 rounded-xl font-display font-medium
+           border-3 cursor-pointer transition-all duration-200;
+  }
+  .tab-block-active {
+    @apply tab-block bg-action text-white border-ink shadow-block-sm;
+  }
+  .tab-block-inactive {
+    @apply tab-block bg-white text-ink border-ink hover:bg-primary-50;
+  }
+  .dark .tab-block-active { @apply border-night-400; }
+  .dark .tab-block-inactive {
+    @apply bg-night-100 text-primary-100 border-night-400 hover:bg-night-50;
+  }
+
+  /* ---------- 徽章 ---------- */
+  .badge {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-display font-bold
+           border-2 border-ink;
+  }
+  .badge-pending  { @apply badge bg-pop-yellow text-ink; }
+  .badge-approved { @apply badge bg-primary-400 text-ink; }
+  .badge-rejected { @apply badge bg-pop-rose text-white; }
+  .dark .badge { @apply border-night-400; }
+
+  /* ---------- 装饰几何块 ---------- */
+  .deco-square {
+    @apply absolute border-3 border-ink rounded-2xl;
+  }
+  .deco-circle {
+    @apply absolute border-3 border-ink rounded-full;
+  }
+  .dark .deco-square, .dark .deco-circle { @apply border-night-400; }
+
+  /* ---------- 渐变文字 ---------- */
+  .text-gradient {
+    background: linear-gradient(135deg, #059669 0%, #F97316 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .dark .text-gradient {
+    background: linear-gradient(135deg, #34D399 0%, #FB923C 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ---------- 网格 / 点阵背景 ---------- */
+  .bg-grid {
+    @apply bg-grid-light bg-grid-md;
+  }
+  .dark .bg-grid {
+    @apply bg-grid-dark bg-grid-md;
+  }
+
+  /* ---------- 链接 ---------- */
+  .link-action {
+    @apply text-action font-medium hover:underline underline-offset-2 cursor-pointer transition-colors;
+  }
+  .link-primary {
+    @apply text-primary-600 font-medium hover:underline underline-offset-2 cursor-pointer transition-colors;
+  }
+  .dark .link-primary { @apply text-primary-400; }
+
+  /* ---------- Header (sticky) ---------- */
+  .header-block {
+    @apply sticky top-0 z-40 bg-white border-b-3 border-ink;
+  }
+  .dark .header-block {
+    @apply bg-night-100 border-night-400;
+  }
+
+  /* ---------- 菜单项 ---------- */
+  .menu-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-ink
+           hover:bg-primary-100 hover:text-primary-700 cursor-pointer transition-all duration-200;
+  }
+  .menu-item-active {
+    @apply bg-action text-white hover:bg-action hover:text-white;
+  }
+  .dark .menu-item {
+    @apply text-primary-100 hover:bg-night-50 hover:text-primary-300;
+  }
+  .dark .menu-item-active {
+    @apply bg-action text-white hover:bg-action;
+  }
+
+  /* ---------- 空状态 ---------- */
+  .empty-state {
+    @apply flex flex-col items-center justify-center text-center py-16 px-6;
+  }
+}
+
+/* ==========================================================================
+   工具类
+   ========================================================================== */
+@layer utilities {
+  /* iOS Safari 视口高度兼容（大字体模式 + 地址栏问题） */
+  .h-screen-safe {
+    height: 100vh;
+    height: 100dvh;
+  }
+  .min-h-screen-safe {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  .max-h-modal {
+    max-height: 88vh;
+    max-height: 88dvh;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+
+  .text-shadow-block {
+    text-shadow: 3px 3px 0 rgba(6, 78, 59, 1);
+  }
+  .dark .text-shadow-block {
+    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* ==========================================================================
+   无障碍：减少动画
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   键盘焦点（全局）
+   ========================================================================== */
+:focus-visible {
+  outline: 3px solid #F97316;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ==========================================================================
+   全局链接动效
+   ========================================================================== */
+a {
+  transition: color 0.2s ease;
+}
+
+/* ==========================================================================
+   iOS 适配：输入框 16px 防止聚焦时页面被自动放大
+   （iOS Safari 当 input 字号 < 16px 时，聚焦会触发整页放大）
+   ========================================================================== */
+@media screen and (max-width: 767px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="number"],
+  input[type="datetime-local"],
+  input[type="date"],
+  input[type="time"],
+  textarea,
+  select,
+  .input-block {
+    font-size: 16px !important;
+  }
+}
+
+/* Tab 按钮确保最小触摸目标（iOS HIG 44pt），大字体下不易误触 */
+.tab-block-active,
+.tab-block-inactive {
+  min-height: 44px;
+}
