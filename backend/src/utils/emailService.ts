@@ -20,6 +20,25 @@ const getTransporter = (): nodemailer.Transporter => {
   return transporter;
 };
 
+// HTML 转义：邮件内容里所有用户可控字段都必须经过它，防止 HTML 注入（例如攻击者把用户名注册为钓鱼链接）
+const escapeHtml = (v: unknown): string =>
+  String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+// 校验 URL 是否为 http/https，拒绝 javascript:/data: 等危险协议
+const safeUrl = (url: string): string => {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.toString() : '#';
+  } catch {
+    return '#';
+  }
+};
+
 // 统一邮件外壳（Vibrant Block 风格，与站点配色一致）
 const emailShell = (title: string, body: string) => `
 <div style="max-width:520px;margin:0 auto;font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:#ECFDF5;padding:24px;">
@@ -27,7 +46,7 @@ const emailShell = (title: string, body: string) => `
     <!-- 头部 -->
     <div style="background:#059669;padding:20px 24px;position:relative;">
       <h1 style="margin:0;color:#fff;font-size:20px;font-weight:800;letter-spacing:1px;">AniMap</h1>
-      <p style="margin:4px 0 0;color:rgba(255,255,255,0.85);font-size:13px;">${title}</p>
+      <p style="margin:4px 0 0;color:rgba(255,255,255,0.85);font-size:13px;">${escapeHtml(title)}</p>
     </div>
     <!-- 内容 -->
     <div style="padding:24px;">
@@ -42,20 +61,22 @@ const emailShell = (title: string, body: string) => `
 
 const infoRow = (label: string, value: string) =>
   `<div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;">
-    <span style="flex-shrink:0;background:#F97316;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;border:2px solid #064E3B;">${label}</span>
-    <span style="color:#064E3B;font-size:14px;line-height:1.5;">${value}</span>
+    <span style="flex-shrink:0;background:#F97316;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;border:2px solid #064E3B;">${escapeHtml(label)}</span>
+    <span style="color:#064E3B;font-size:14px;line-height:1.5;">${escapeHtml(value)}</span>
   </div>`;
 
 const actionBtn = (text: string, url: string) =>
   `<div style="text-align:center;margin-top:20px;">
-    <a href="${url}" style="display:inline-block;background:#F97316;color:#fff;font-weight:700;font-size:15px;padding:12px 32px;border-radius:12px;border:3px solid #064E3B;text-decoration:none;box-shadow:4px 4px 0 #064E3B;">${text}</a>
+    <a href="${escapeHtml(safeUrl(url))}" style="display:inline-block;background:#F97316;color:#fff;font-weight:700;font-size:15px;padding:12px 32px;border-radius:12px;border:3px solid #064E3B;text-decoration:none;box-shadow:4px 4px 0 #064E3B;">${escapeHtml(text)}</a>
   </div>`;
 
 const send = async (to: string, subject: string, html: string) => {
+  // 防邮件头注入：subject 里的换行会被解释为新 header
+  const safeSubject = subject.replace(/[\r\n]+/g, ' ');
   try {
     await getTransporter().sendMail({
       from: `"AniMap" <${process.env.SMTP_USER}>`,
-      to, subject, html,
+      to, subject: safeSubject, html,
     });
   } catch (err) {
     console.error(`[email] 发送失败 to=${to}:`, err);
@@ -69,7 +90,7 @@ export const sendVerificationCode = async (to: string, code: string): Promise<vo
   const body = `
     <p style="color:#064E3B;font-size:15px;margin:0 0 16px;">你好，你的验证码是：</p>
     <div style="text-align:center;margin:20px 0;">
-      <span style="display:inline-block;padding:14px 36px;font-size:32px;font-weight:900;letter-spacing:8px;color:#F97316;background:#ECFDF5;border-radius:12px;border:3px solid #064E3B;box-shadow:4px 4px 0 #064E3B;">${code}</span>
+      <span style="display:inline-block;padding:14px 36px;font-size:32px;font-weight:900;letter-spacing:8px;color:#F97316;background:#ECFDF5;border-radius:12px;border:3px solid #064E3B;box-shadow:4px 4px 0 #064E3B;">${escapeHtml(code)}</span>
     </div>
     <p style="color:#064E3B;font-size:13px;opacity:0.7;margin:16px 0 0;">验证码 5 分钟内有效，请勿泄露给他人。</p>`;
   await send(to, '【AniMap】你的邮箱验证码', emailShell('邮箱验证', body));
@@ -130,7 +151,7 @@ export const sendFavoriteReminder = (to: string, info: {
   type: '展会' | '组局'; name: string; startTime: string; address: string; hoursLeft: number;
 }) => {
   const body = `
-    <p style="color:#064E3B;font-size:15px;font-weight:700;margin:0 0 16px;">你收藏的${info.type}还有 ${info.hoursLeft} 小时就要开始了！</p>
+    <p style="color:#064E3B;font-size:15px;font-weight:700;margin:0 0 16px;">你收藏的${escapeHtml(info.type)}还有 ${info.hoursLeft} 小时就要开始了！</p>
     ${infoRow(info.type, info.name)}
     ${infoRow('时间', info.startTime)}
     ${infoRow('地点', info.address)}
@@ -143,7 +164,7 @@ export const sendAdminReviewRequest = async (info: {
 }) => {
   const adminEmail = process.env.ADMIN_EMAIL;
   if (!adminEmail) return;
-  const siteUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const siteUrl = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'http://localhost:3000';
   const body = `
     <p style="color:#064E3B;font-size:15px;font-weight:700;margin:0 0 16px;">有新的审核请求待处理</p>
     ${infoRow('类型', info.type)}
@@ -162,7 +183,7 @@ export const sendReviewResult = async (to: string, info: {
   const statusText = info.approved ? '✅ 审核通过' : '❌ 审核未通过';
   const statusColor = info.approved ? '#059669' : '#ef4444';
   const body = `
-    <p style="color:#064E3B;font-size:15px;font-weight:700;margin:0 0 16px;">你提交的${info.type}审核结果已出炉</p>
+    <p style="color:#064E3B;font-size:15px;font-weight:700;margin:0 0 16px;">你提交的${escapeHtml(info.type)}审核结果已出炉</p>
     ${infoRow(info.type, info.itemName)}
     <div style="text-align:center;margin:20px 0;">
       <span style="display:inline-block;padding:10px 28px;font-size:16px;font-weight:800;color:#fff;background:${statusColor};border-radius:12px;border:3px solid #064E3B;box-shadow:4px 4px 0 #064E3B;">${statusText}</span>

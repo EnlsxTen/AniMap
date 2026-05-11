@@ -11,6 +11,7 @@ export const getJwtSecret = (): string => {
   return secret;
 };
 
+// payload 中应包含 userId、role、tokenVersion（用于密码变更/账号封禁时吊销旧 token）
 export const signToken = (payload: object, options: SignOptions = { expiresIn: '7d' }): string => {
   return jwt.sign(payload, getJwtSecret(), options);
 };

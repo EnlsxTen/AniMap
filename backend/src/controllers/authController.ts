@@ -7,11 +7,16 @@ import { generateCode, canSendCode, getCooldownSeconds, storeCode, verifyCode, c
 import { AuthRequest, invalidateUserCache } from '../middleware/auth';
 import { signToken } from '../utils/jwt';
 
+// 密码强度：至少 8 位，且必须包含字母和数字（同时允许特殊字符）
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[\S]{8,128}$/;
+const PASSWORD_MSG = '密码至少 8 位，且必须同时包含字母和数字';
+
 export const registerValidation = [
-  body('email').trim().isEmail().withMessage('请输入有效的邮箱地址'),
-  body('password').isLength({ min: 6 }).withMessage('密码长度至少为6位'),
+  body('email').trim().isEmail().withMessage('请输入有效的邮箱地址').isLength({ max: 255 }),
+  body('password').matches(PASSWORD_REGEX).withMessage(PASSWORD_MSG),
   body('userType').optional().isIn(['merchant', 'personal']).withMessage('用户类型无效'),
-  body('username').trim().notEmpty().withMessage('请输入用户名')
+  body('username').trim().notEmpty().withMessage('请输入用户名').isLength({ max: 100 }).withMessage('用户名过长'),
+  body('phone').optional({ values: 'falsy' }).isLength({ max: 30 }).withMessage('手机号过长'),
 ];
 
 export const loginValidation = [
@@ -50,7 +55,7 @@ export const register = async (req: Request, res: Response) => {
     if (!verificationCode) {
       return res.status(400).json({ error: '请输入邮箱验证码' });
     }
-    if (!verifyCode(normalizedEmail, verificationCode)) {
+    if (!verifyCode(normalizedEmail, verificationCode, 'register')) {
       return res.status(400).json({ error: '验证码错误或已过期' });
     }
 
@@ -59,7 +64,7 @@ export const register = async (req: Request, res: Response) => {
 
     // Create user
     const result = await pool.query(
-      'INSERT INTO users (email, password, username, phone, role, approval_status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, username, role, approval_status, created_at',
+      'INSERT INTO users (email, password, username, phone, role, approval_status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, username, role, approval_status, token_version, created_at',
       [normalizedEmail, hashedPassword, normalizedUsername, normalizedPhone, normalizedUserType, approvalStatus]
     );
 
@@ -82,7 +87,7 @@ export const register = async (req: Request, res: Response) => {
     }
 
     // Generate JWT
-    const token = signToken({ userId: user.id, role: user.role });
+    const token = signToken({ userId: user.id, role: user.role, tokenVersion: user.token_version ?? 0 });
 
     res.status(201).json({
       message: 'User registered successfully',
@@ -112,13 +117,14 @@ export const login = async (req: Request, res: Response) => {
 
   const { email, password } = req.body;
   const normalizedEmail = email.trim().toLowerCase();
-  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || 'unknown';
+  // 使用 req.ip（依赖 app.set('trust proxy', 1)），避免 X-Forwarded-For 被攻击者伪造
+  const clientIp = req.ip || 'unknown';
 
   // 检查 IP 是否被封锁
   if (isIpBlocked(clientIp)) {
     const remainingSeconds = getIpBlockRemainingSeconds(clientIp);
-    return res.status(429).json({ 
-      error: `登录失败次数过多，请在 ${Math.ceil(remainingSeconds / 60)} 分钟后重试` 
+    return res.status(429).json({
+      error: `登录失败次数过多，请在 ${Math.ceil(remainingSeconds / 60)} 分钟后重试`
     });
   }
 
@@ -150,7 +156,7 @@ export const login = async (req: Request, res: Response) => {
     clearLoginFailures(clientIp);
 
     // Generate JWT
-    const token = signToken({ userId: user.id, role: user.role });
+    const token = signToken({ userId: user.id, role: user.role, tokenVersion: user.token_version ?? 0 });
 
     res.json({
       message: 'Login successful',
@@ -172,11 +178,11 @@ export const login = async (req: Request, res: Response) => {
 export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
-    
+
     if (!userId) {
       return res.status(401).json({ error: '未登录' });
     }
-    
+
     const result = await pool.query(
       'SELECT id, email, username, phone, role, approval_status, created_at FROM users WHERE id = $1',
       [userId]
@@ -222,13 +228,17 @@ export const updateMerchantApproval = async (req: Request, res: Response) => {
   const { approvalStatus } = req.body;
 
   try {
-    const result = await pool.query(
-      `UPDATE users
-       SET approval_status = $1, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2 AND role = 'merchant'
-       RETURNING id, email, username, phone, role, approval_status, created_at, updated_at`,
-      [approvalStatus, id]
-    );
+    // 拒绝时同步把 token_version+1，强制吊销被拒商户已签发的 token
+    const sql = approvalStatus === 'rejected'
+      ? `UPDATE users
+         SET approval_status = $1, token_version = token_version + 1, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2 AND role = 'merchant'
+         RETURNING id, email, username, phone, role, approval_status, created_at, updated_at`
+      : `UPDATE users
+         SET approval_status = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2 AND role = 'merchant'
+         RETURNING id, email, username, phone, role, approval_status, created_at, updated_at`;
+    const result = await pool.query(sql, [approvalStatus, id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: '商户账号不存在' });
@@ -256,13 +266,13 @@ export const sendCodeValidation = [
 
 export const loginByCodeValidation = [
   body('email').trim().isEmail().withMessage('请输入有效的邮箱地址'),
-  body('code').isLength({ min: 6, max: 6 }).withMessage('请输入6位验证码')
+  body('code').isLength({ min: 6, max: 6 }).isNumeric().withMessage('请输入6位验证码')
 ];
 
 export const forgotPasswordValidation = [
   body('email').trim().isEmail().withMessage('请输入有效的邮箱地址'),
-  body('code').isLength({ min: 6, max: 6 }).withMessage('请输入6位验证码'),
-  body('newPassword').isLength({ min: 6 }).withMessage('新密码长度至少为6位')
+  body('code').isLength({ min: 6, max: 6 }).isNumeric().withMessage('请输入6位验证码'),
+  body('newPassword').matches(PASSWORD_REGEX).withMessage(PASSWORD_MSG)
 ];
 
 // 发送验证码（注册/登录/重置密码通用）
@@ -275,9 +285,9 @@ export const sendCode = async (req: Request, res: Response) => {
     });
   }
 
-  const { email, purpose } = req.body;
+  const { email, purpose } = req.body as { email: string; purpose: 'register' | 'login' | 'reset' };
   const normalizedEmail = email.trim().toLowerCase();
-  const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+  const clientIp = req.ip || 'unknown';
 
   try {
     // IP 全局频率限制（同一 IP 每分钟最多 5 次）
@@ -286,8 +296,8 @@ export const sendCode = async (req: Request, res: Response) => {
     }
 
     // 单邮箱 60 秒防刷
-    if (!canSendCode(normalizedEmail)) {
-      const seconds = getCooldownSeconds(normalizedEmail);
+    if (!canSendCode(normalizedEmail, purpose)) {
+      const seconds = getCooldownSeconds(normalizedEmail, purpose);
       return res.status(429).json({ error: `请${seconds}秒后再试`, cooldown: seconds });
     }
 
@@ -312,7 +322,7 @@ export const sendCode = async (req: Request, res: Response) => {
     const code = generateCode();
     if (shouldSend) {
       await sendVerificationCode(normalizedEmail, code);
-      storeCode(normalizedEmail, code);
+      storeCode(normalizedEmail, code, purpose);
     }
     recordIpSend(clientIp);
 
@@ -335,19 +345,19 @@ export const loginByCode = async (req: Request, res: Response) => {
 
   const { email, code } = req.body;
   const normalizedEmail = email.trim().toLowerCase();
-  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || 'unknown';
+  const clientIp = req.ip || 'unknown';
 
   // 检查 IP 是否被封锁
   if (isIpBlocked(clientIp)) {
     const remainingSeconds = getIpBlockRemainingSeconds(clientIp);
-    return res.status(429).json({ 
-      error: `登录失败次数过多，请在 ${Math.ceil(remainingSeconds / 60)} 分钟后重试` 
+    return res.status(429).json({
+      error: `登录失败次数过多，请在 ${Math.ceil(remainingSeconds / 60)} 分钟后重试`
     });
   }
 
   try {
-    // 验证验证码
-    if (!verifyCode(normalizedEmail, code)) {
+    // 验证验证码（必须是 login 用途）
+    if (!verifyCode(normalizedEmail, code, 'login')) {
       recordLoginFailure(clientIp);
       return res.status(401).json({ error: '邮箱或验证码错误' });
     }
@@ -372,7 +382,7 @@ export const loginByCode = async (req: Request, res: Response) => {
     clearLoginFailures(clientIp);
 
     // 签发 JWT
-    const token = signToken({ userId: user.id, role: user.role });
+    const token = signToken({ userId: user.id, role: user.role, tokenVersion: user.token_version ?? 0 });
 
     res.json({
       message: 'Login successful',
@@ -411,17 +421,22 @@ export const forgotPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ error: '验证码错误或已过期' });
     }
 
-    // 验证验证码
-    if (!verifyCode(normalizedEmail, code)) {
+    // 验证验证码（必须是 reset 用途）
+    if (!verifyCode(normalizedEmail, code, 'reset')) {
       return res.status(400).json({ error: '验证码错误或已过期' });
     }
 
-    // 更新密码
+    // 更新密码 + 递增 token_version 强制吊销旧 token
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await pool.query(
-      'UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2',
+    const result = await pool.query(
+      `UPDATE users
+       SET password = $1, token_version = token_version + 1, updated_at = CURRENT_TIMESTAMP
+       WHERE email = $2 RETURNING id`,
       [hashedPassword, normalizedEmail]
     );
+    if (result.rows[0]?.id) {
+      invalidateUserCache(result.rows[0].id);
+    }
 
     res.json({ message: '密码重置成功，请使用新密码登录' });
   } catch (error) {

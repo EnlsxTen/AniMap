@@ -48,7 +48,9 @@ const Register: React.FC = () => {
     e.preventDefault();
     setError(''); setSuccessMessage('');
     if (formData.password !== formData.confirmPassword) { setError('两次输入的密码不一致'); return; }
-    if (formData.password.length < 6) { setError('密码长度至少为6位'); return; }
+    if (!/^(?=.*[A-Za-z])(?=.*\d)[\S]{8,128}$/.test(formData.password)) {
+      setError('密码至少 8 位，且必须同时包含字母和数字'); return;
+    }
     if (!formData.verificationCode) { setError('请输入邮箱验证码'); return; }
     setLoading(true);
     try {
@@ -174,7 +176,7 @@ const Register: React.FC = () => {
 
             <div>
               <label className="label-block flex items-center gap-1.5"><Lock className="w-4 h-4" /> 密码</label>
-              <input type="password" name="password" value={formData.password} onChange={handleChange} className="input-block" placeholder="至少6位" autoComplete="new-password" required />
+              <input type="password" name="password" value={formData.password} onChange={handleChange} className="input-block" placeholder="至少 8 位，含字母+数字" autoComplete="new-password" required />
             </div>
 
             <div>

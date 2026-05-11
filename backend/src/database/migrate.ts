@@ -27,6 +27,12 @@ const createTables = async () => {
       ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) DEFAULT 'pending'
     `);
 
+    // token_version：每次密码修改/账号被拒时 +1，配合 JWT 中的 tokenVersion 实现 token 吊销
+    await client.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0
+    `);
+
     await client.query(`
       UPDATE users
       SET approval_status = COALESCE(NULLIF(approval_status, ''), 'approved')

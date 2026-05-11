@@ -1,32 +1,39 @@
+import crypto from 'crypto';
+
+export type CodePurpose = 'register' | 'login' | 'reset';
+
 interface StoredCode {
   code: string;
+  purpose: CodePurpose;
   expiresAt: number;
   sentAt: number;
   attempts: number;
 }
 
-// 内存存储验证码，key 为邮箱
+// 内存存储验证码，key 为 `${email}|${purpose}`，避免一个 login 验证码被用来 reset password
 const codeMap = new Map<string, StoredCode>();
 
 const CODE_EXPIRE_MS = 5 * 60 * 1000; // 5 分钟
 const RESEND_INTERVAL_MS = 60 * 1000;  // 60 秒防刷
 const MAX_ATTEMPTS = 5;                // 最多尝试 5 次
 
-// 生成 6 位数字验证码
+const keyOf = (email: string, purpose: CodePurpose) => `${email}|${purpose}`;
+
+// 生成 6 位数字验证码（用 crypto.randomInt，避免 Math.random 可预测）
 export const generateCode = (): string => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 };
 
-// 检查是否可以发送（60秒内不能重复发）
-export const canSendCode = (email: string): boolean => {
-  const stored = codeMap.get(email);
+// 检查是否可以发送（60秒内不能重复发，按 email+purpose 维度）
+export const canSendCode = (email: string, purpose: CodePurpose): boolean => {
+  const stored = codeMap.get(keyOf(email, purpose));
   if (!stored) return true;
   return Date.now() - stored.sentAt >= RESEND_INTERVAL_MS;
 };
 
 // 获取剩余冷却秒数
-export const getCooldownSeconds = (email: string): number => {
-  const stored = codeMap.get(email);
+export const getCooldownSeconds = (email: string, purpose: CodePurpose): number => {
+  const stored = codeMap.get(keyOf(email, purpose));
   if (!stored) return 0;
   const elapsed = Date.now() - stored.sentAt;
   if (elapsed >= RESEND_INTERVAL_MS) return 0;
@@ -34,9 +41,10 @@ export const getCooldownSeconds = (email: string): number => {
 };
 
 // 存储验证码
-export const storeCode = (email: string, code: string): void => {
-  codeMap.set(email, {
+export const storeCode = (email: string, code: string, purpose: CodePurpose): void => {
+  codeMap.set(keyOf(email, purpose), {
     code,
+    purpose,
     expiresAt: Date.now() + CODE_EXPIRE_MS,
     sentAt: Date.now(),
     attempts: 0,
@@ -44,31 +52,36 @@ export const storeCode = (email: string, code: string): void => {
 };
 
 // 验证验证码（验证成功后自动删除，错误超过5次自动失效）
-export const verifyCode = (email: string, code: string): boolean => {
-  const stored = codeMap.get(email);
+// 用 timingSafeEqual 防止时序侧信道
+export const verifyCode = (email: string, code: string, purpose: CodePurpose): boolean => {
+  const k = keyOf(email, purpose);
+  const stored = codeMap.get(k);
   if (!stored) return false;
   if (Date.now() > stored.expiresAt) {
-    codeMap.delete(email);
+    codeMap.delete(k);
     return false;
   }
   if (stored.attempts >= MAX_ATTEMPTS) {
-    codeMap.delete(email);
+    codeMap.delete(k);
     return false;
   }
-  if (stored.code !== code) {
+  const a = Buffer.from(stored.code);
+  const b = Buffer.from(String(code));
+  const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+  if (!ok) {
     stored.attempts += 1;
     return false;
   }
-  codeMap.delete(email);
+  codeMap.delete(k);
   return true;
 };
 
 // 定期清理过期验证码（每 10 分钟）
 setInterval(() => {
   const now = Date.now();
-  for (const [email, stored] of codeMap.entries()) {
+  for (const [k, stored] of codeMap.entries()) {
     if (now > stored.expiresAt) {
-      codeMap.delete(email);
+      codeMap.delete(k);
     }
   }
 }, 10 * 60 * 1000);
