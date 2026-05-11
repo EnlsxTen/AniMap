@@ -55,11 +55,9 @@ animap/
 │   │   ├── utils/         # 工具函数
 │   │   └── App.tsx        # 应用入口
 │   └── package.json
-├── deploy-setup.sh        # Ubuntu 环境安装脚本
-├── deploy-app.sh          # 应用部署脚本
-├── update-app.sh          # 增量更新脚本
-├── check-deployment.sh    # 部署前环境检查脚本
-├── uninstall.sh           # 完全卸载脚本
+├── deploy.sh               # 一键部署脚本（环境检查 + 安装 + 部署 + 可选 HTTPS）
+├── update-app.sh           # 增量更新脚本
+├── uninstall.sh            # 完全卸载脚本
 └── README.md
 ```
 
@@ -147,62 +145,33 @@ npm run dev
 
 ## Ubuntu 服务器部署
 
-### 1. 环境准备
+### 一键部署
 
-上传 `deploy-setup.sh` 到服务器并运行：
-
-```bash
-chmod +x deploy-setup.sh
-sudo ./deploy-setup.sh
-```
-
-这将安装：
-- Node.js 18
-- PostgreSQL
-- Nginx
-- PM2
-
-### 2. 上传项目代码
-
-将项目代码上传到服务器（建议路径：`/var/www/animap`）
-
-```bash
-# 使用 scp 或 git clone
-scp -r animap user@server:/var/www/
-# 或
-cd /var/www
-git clone your-repo-url animap
-```
-
-### 3. 配置环境变量
-
-```bash
-cd /var/www/animap/backend
-cp .env.example .env
-nano .env  # 编辑配置文件
-```
-
-配置项：
-- 数据库连接信息
-- JWT 密钥
-- 高德地图 Web 服务 Key
-- SMTP 邮箱配置
-- 管理员种子账号（ADMIN_EMAIL / ADMIN_PASSWORD / ADMIN_USERNAME）
-
-### 4. 部署应用
+将项目代码上传到服务器（建议路径：`/var/www/animap`）后，运行：
 
 ```bash
 cd /var/www/animap
-chmod +x deploy-app.sh
-# deploy-app.sh 会交互式引导你配置域名、高德Key、邮箱、管理员账号等所有参数
-sudo ./deploy-app.sh
+chmod +x deploy.sh
+sudo ./deploy.sh
 ```
 
-### 5. 配置 SSL（可选但推荐）
+`deploy.sh` 会自动完成：
+- 环境检查（OS / 内存 / 磁盘 / 端口）
+- 安装 Node.js 18 / PostgreSQL / Nginx / PM2（缺什么装什么）
+- 创建数据库 + 用户
+- 交互式收集所有配置（域名、Amap Key、SMTP、管理员账号）
+- 生成前后端 `.env`、编译、迁移、PM2 启动
+- Nginx 反向代理 + 安全头 + UFW 防火墙
+- **可选**自动申请 Let's Encrypt 证书并配置 HTTPS 跳转
+
+详细部署文档见 [DEPLOYMENT.md](DEPLOYMENT.md)。
+
+### 增量更新
+
+代码改完后增量更新（保留 .env、uploads、数据库）：
 
 ```bash
-sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d your-domain.com
+sudo ./update-app.sh
 ```
 
 ## API 接口文档

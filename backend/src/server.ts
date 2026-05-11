@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import multer from 'multer';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth';
 import eventRoutes from './routes/events';
 import settingsRoutes from './routes/settings';
@@ -29,6 +31,12 @@ const PORT = process.env.PORT || 3001;
 // 信任 Nginx 反向代理，使 req.ip 能获取真实客户端 IP
 app.set('trust proxy', 1);
 
+// 安全 HTTP 头（CSP 留给前端 dist 由 Nginx 设，避免影响接口/上传响应）
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // 允许前端跨 origin 拉 /uploads 图片
+}));
+
 // CORS configuration (FRONTEND_URL 支持逗号分隔多个域名)
 const productionOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
   .split(',')
@@ -44,11 +52,26 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Static files
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+// 全局兜底限流：每 IP 每分钟 300 次（写接口由各路由单独再加严限流）
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 300,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: '请求过于频繁，请稍后再试' },
+});
+app.use('/api', globalLimiter);
+
+// Static files：给 /uploads 加上 nosniff，防止伪装图片被当 HTML 解析
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads'), {
+  setHeaders: (res) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'");
+  },
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -64,7 +87,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 });
 
 // Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ error: '文件过大，请上传小于 5MB 的图片' });
@@ -72,7 +95,9 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     return res.status(400).json({ error: err.message });
   }
   console.error(err.stack);
-  res.status(500).json({ error: err.message || 'Something went wrong' });
+  // 生产环境不回显内部错误信息，避免泄露栈/路径
+  const isProd = process.env.NODE_ENV === 'production';
+  res.status(500).json({ error: isProd ? '服务器内部错误' : (err.message || 'Something went wrong') });
 });
 
 app.listen(PORT, () => {

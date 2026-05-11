@@ -47,7 +47,9 @@ const ForgotPassword: React.FC = () => {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (newPassword.length < 6) { setError('新密码长度至少为6位'); return; }
+    if (!/^(?=.*[A-Za-z])(?=.*\d)[\S]{8,128}$/.test(newPassword)) {
+      setError('密码至少 8 位，且必须同时包含字母和数字'); return;
+    }
     if (newPassword !== confirmPassword) { setError('两次输入的密码不一致'); return; }
     setLoading(true);
     try {
@@ -141,7 +143,7 @@ const ForgotPassword: React.FC = () => {
 
                 <div>
                   <label className="label-block flex items-center gap-1.5"><Lock className="w-4 h-4" /> 新密码</label>
-                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-block" placeholder="至少6位" required />
+                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-block" placeholder="至少 8 位，含字母+数字" required />
                 </div>
 
                 <div>
