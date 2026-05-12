@@ -26,7 +26,7 @@ const CreateVenue: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setError('图片大小不能超过 5MB'); return; }
+    if (file.size > 10 * 1024 * 1024) { setError('图片大小不能超过 10MB'); return; }
     setCover(file);
     const reader = new FileReader();
     reader.onloadend = () => setPreviewUrl(reader.result as string);
@@ -87,7 +87,7 @@ const CreateVenue: React.FC = () => {
                 <label className="label-block">店铺封面图</label>
                 <div className="relative rounded-2xl border-3 border-dashed border-ink/30 dark:border-night-400 p-6 text-center cursor-pointer hover:border-action hover:bg-action/5 transition-all duration-200"
                   onClick={() => document.getElementById('cover-input')?.click()}>
-                  <input id="cover-input" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                  <input id="cover-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif" onChange={handleFileChange} className="hidden" />
                   {previewUrl ? (
                     <div className="relative inline-block">
                       <img src={previewUrl} alt="Preview" className="mx-auto max-h-48 rounded-xl object-cover border-3 border-ink dark:border-night-400 shadow-block-sm" />
@@ -102,7 +102,7 @@ const CreateVenue: React.FC = () => {
                         <Upload className="w-7 h-7 text-ink" strokeWidth={2.5} />
                       </div>
                       <p className="font-display text-ink dark:text-primary-100">点击上传封面图</p>
-                      <p className="text-xs text-ink-muted dark:text-primary-100/60 mt-1">JPG / PNG / WebP，最大 5MB</p>
+                      <p className="text-xs text-ink-muted dark:text-primary-100/60 mt-1">JPG / PNG / WebP / HEIC，最大 10MB</p>
                     </div>
                   )}
                 </div>
