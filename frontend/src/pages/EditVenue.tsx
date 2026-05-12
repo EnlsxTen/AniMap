@@ -70,7 +70,7 @@ const EditVenue: React.FC = () => {
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setError('图片大小不能超过 5MB'); return; }
+    if (file.size > 10 * 1024 * 1024) { setError('图片大小不能超过 10MB'); return; }
     setCover(file);
     const reader = new FileReader();
     reader.onloadend = () => setPreviewUrl(reader.result as string);
@@ -179,7 +179,7 @@ const EditVenue: React.FC = () => {
                 <label className="label-block">店铺封面图</label>
                 <div className="relative rounded-2xl border-3 border-dashed border-ink/30 dark:border-night-400 p-5 text-center cursor-pointer hover:border-action hover:bg-action/5 transition-all duration-200"
                   onClick={() => document.getElementById('cover-edit-input')?.click()}>
-                  <input id="cover-edit-input" type="file" accept="image/*" onChange={handleCoverChange} className="hidden" />
+                  <input id="cover-edit-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif" onChange={handleCoverChange} className="hidden" />
                   {previewUrl ? (
                     <div className="relative inline-block">
                       <p className="text-xs font-display text-action mb-2">新封面预览</p>
@@ -296,7 +296,7 @@ const EditVenue: React.FC = () => {
               <label className="flex items-center justify-center gap-2 p-4 rounded-xl border-3 border-dashed border-ink/30 dark:border-night-400 cursor-pointer hover:border-action hover:bg-action/5 transition-all duration-200 text-ink-muted dark:text-primary-100/60 font-display text-sm">
                 <Plus className="w-5 h-5" />
                 添加导航图片（还可添加 {10 - navPhotos.length - newPhotos.length} 张）
-                <input type="file" accept="image/*" multiple onChange={handleNewPhotosChange} className="hidden" />
+                <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif" multiple onChange={handleNewPhotosChange} className="hidden" />
               </label>
             )}
           </motion.div>

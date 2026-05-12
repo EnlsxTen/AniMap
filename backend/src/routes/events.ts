@@ -11,7 +11,7 @@ import {
   createEventValidation
 } from '../controllers/eventController';
 import { authMiddleware, requireRole, optionalAuth } from '../middleware/auth';
-import { upload } from '../middleware/upload';
+import { upload, processUploadedFile } from '../middleware/upload';
 
 const router = express.Router();
 
@@ -20,7 +20,7 @@ router.get('/public', getPublicEvents);
 
 // Protected routes (merchant) - specific paths before dynamic params
 router.get('/merchant/my-events', authMiddleware, getMerchantEvents);
-router.post('/', authMiddleware, upload.single('poster'), createEventValidation, createEvent);
+router.post('/', authMiddleware, upload.single('poster'), processUploadedFile('poster'), createEventValidation, createEvent);
 
 // Admin routes
 router.get('/admin/pending', authMiddleware, requireRole(['admin']), getPendingEvents);
@@ -28,7 +28,7 @@ router.patch('/:id/status', authMiddleware, requireRole(['admin']), updateEventS
 
 // Dynamic routes (must be last)
 router.get('/:id', optionalAuth, getEventById);
-router.put('/:id', authMiddleware, upload.single('poster'), createEventValidation, updateEvent);
+router.put('/:id', authMiddleware, upload.single('poster'), processUploadedFile('poster'), createEventValidation, updateEvent);
 router.delete('/:id', authMiddleware, deleteEvent);
 
 export default router;
