@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Mail, Lock, KeyRound, ArrowRight, Sun, Moon, Loader2 } from 'lucide-react';
 import { authService } from '../services/authService';
-import { getApiErrorMessage } from '../utils/helpers';
+import { settingsService } from '../services/settingsService';
+import { getApiErrorMessage, getImageUrl } from '../utils/helpers';
 import { AuthResponse } from '../types';
 import FloatingDecorations from '../components/FloatingDecorations';
 import Footer from '../components/Footer';
@@ -22,8 +23,13 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [codeSending, setCodeSending] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [bgUrl, setBgUrl] = useState<string | null>(null);
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    settingsService.getAuthBg().then(r => { if (r.url) setBgUrl(getImageUrl(r.url)); }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -74,7 +80,13 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen-safe flex flex-col bg-primary-50 dark:bg-night-200 relative overflow-hidden">
-      <FloatingDecorations />
+      {bgUrl && (
+        <>
+          <div className="fixed inset-0 bg-cover bg-center bg-no-repeat -z-10" style={{ backgroundImage: `url(${bgUrl})` }} />
+          <div className="fixed inset-0 bg-primary-50/80 dark:bg-night-200/85 backdrop-blur-sm -z-10" />
+        </>
+      )}
+      {!bgUrl && <FloatingDecorations />}
 
       {/* 顶部主题切换 */}
       <div className="absolute top-4 right-4 z-30">

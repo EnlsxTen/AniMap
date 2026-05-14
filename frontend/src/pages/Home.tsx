@@ -266,6 +266,7 @@ const Home: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [tab, setTab] = useState<TabType>('all');
   const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
   const mapRef = useRef<any>(null);
   const mapInstance = useRef<any>(null);
   const amapRef = useRef<any>(null);
@@ -379,7 +380,7 @@ const Home: React.FC = () => {
       addSessionMarkers();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [events, venues, sessions, mapReady, tab]);
+  }, [events, venues, sessions, mapReady]);
 
   // Tab 切换时控制 marker 显示/隐藏（数据未变化时也需要响应）
   useEffect(() => {
@@ -417,7 +418,7 @@ const Home: React.FC = () => {
         setIsMobileSidebarOpen(false);
         mapInstance.current.setCenter([event.longitude, event.latitude]);
       });
-      marker.setMap(tab === 'venues' || tab === 'sessions' ? null : mapInstance.current);
+      marker.setMap(mapInstance.current);
       eventMarkers.current.push(marker);
     });
   };
@@ -459,7 +460,7 @@ const Home: React.FC = () => {
         // 加载该店铺的组局列表
         sessionService.getVenueSessions(venue.id).then(r => setVenueSessions(r.sessions)).catch(() => setVenueSessions([]));
       });
-      marker.setMap(tab === 'events' || tab === 'sessions' ? null : mapInstance.current);
+      marker.setMap(mapInstance.current);
       venueMarkers.current.push(marker);
     });
   };
@@ -502,7 +503,7 @@ const Home: React.FC = () => {
         mapInstance.current.setCenter([session.longitude, session.latitude]);
         mapInstance.current.setZoom(16);
       });
-      marker.setMap(tab === 'events' || tab === 'venues' ? null : mapInstance.current);
+      marker.setMap(mapInstance.current);
       sessionMarkers.current.push(marker);
     });
   };
@@ -644,14 +645,43 @@ const Home: React.FC = () => {
               <Menu className="w-6 h-6" strokeWidth={2.5} />
             </button>
 
-            <button
-              type="button"
-              onClick={() => navigate(isAuthenticated() ? '/merchant/create' : '/login')}
-              className="pointer-events-auto w-14 h-14 rounded-2xl bg-action border-3 border-ink dark:border-night-400 shadow-block hover:-translate-y-1 hover:shadow-block-lg transition-all duration-200 flex items-center justify-center text-white"
-              aria-label="发布活动"
-            >
-              <Plus className="w-7 h-7" strokeWidth={3} />
-            </button>
+            <div className="pointer-events-auto relative">
+              {/* 展开菜单 */}
+              <AnimatePresence>
+                {fabOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                    transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                    className="absolute bottom-16 right-0 flex flex-col gap-2 items-end"
+                  >
+                    {[
+                      { label: '发布活动', path: '/merchant/create', color: 'bg-pop-yellow' },
+                      { label: '发布店铺', path: '/merchant/venue/create', color: 'bg-pop-cyan' },
+                      { label: '发布组局', path: '/merchant/session/create', color: 'bg-pop-purple' },
+                    ].map(item => (
+                      <button
+                        key={item.path}
+                        type="button"
+                        onClick={() => { setFabOpen(false); navigate(isAuthenticated() ? item.path : '/login'); }}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl ${item.color} border-3 border-ink dark:border-night-400 shadow-block text-ink font-display text-sm whitespace-nowrap`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <button
+                type="button"
+                onClick={() => setFabOpen(p => !p)}
+                className={`w-14 h-14 rounded-2xl bg-action border-3 border-ink dark:border-night-400 shadow-block hover:-translate-y-1 hover:shadow-block-lg transition-all duration-200 flex items-center justify-center text-white ${fabOpen ? 'rotate-45' : ''}`}
+                aria-label="发布"
+              >
+                <Plus className="w-7 h-7 transition-transform duration-200" strokeWidth={3} />
+              </button>
+            </div>
           </div>
         </div>
 
