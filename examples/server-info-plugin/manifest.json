@@ -1,0 +1,19 @@
+{
+  "id": "server-info",
+  "name": "服务器信息",
+  "description": "查看运行时信息（Node 版本、内存、运行时长、插件目录），支持生成快照报告。用于演示 .ami 导入格式。",
+  "version": "1.0.0",
+  "scheduleHint": "按需手动触发",
+  "settings": [
+    {
+      "key": "note",
+      "label": "备注",
+      "type": "string",
+      "default": "",
+      "helpText": "自定义备注，显示在状态区（演示 string 设置项）"
+    }
+  ],
+  "runActions": [
+    { "id": "snapshot", "label": "生成快照" }
+  ]
+}

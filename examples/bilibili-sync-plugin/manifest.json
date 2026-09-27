@@ -1,0 +1,44 @@
+{
+  "id": "bilibili-sync",
+  "name": "B站漫展同步",
+  "description": "定时抓取 B站会员购的漫展信息，自动地理编码并导入活动库，同步后自动对账海报到 R2。爬虫脚本位于仓库 scripts/sync_events.py。",
+  "version": "1.0.0",
+  "scheduleHint": "开启后每天 03:00 自动同步一次",
+  "settings": [
+    { "key": "enabled", "label": "自动同步", "type": "boolean", "default": false },
+    {
+      "key": "maxPages",
+      "label": "每次抓取页数",
+      "type": "number",
+      "default": 5,
+      "helpText": "抓取会员购列表的页数，越大覆盖越全、耗时越长"
+    },
+    {
+      "key": "eventScope",
+      "label": "收录范围",
+      "type": "select",
+      "default": "convention",
+      "options": [
+        { "value": "convention", "label": "仅漫展类" },
+        { "value": "all", "label": "全部演出活动" }
+      ]
+    },
+    {
+      "key": "scriptPath",
+      "label": "爬虫脚本路径",
+      "type": "string",
+      "placeholder": "留空使用默认探测（仓库 scripts/sync_events.py）",
+      "helpText": "也可用环境变量 BILIBILI_SYNC_SCRIPT 指定"
+    },
+    {
+      "key": "pythonPath",
+      "label": "Python 解释器",
+      "type": "string",
+      "placeholder": "留空自动探测（脚本目录 venv → python3 → python）",
+      "helpText": "也可用环境变量 BILIBILI_SYNC_PYTHON 指定"
+    }
+  ],
+  "runActions": [
+    { "id": "sync", "label": "立即同步" }
+  ]
+}

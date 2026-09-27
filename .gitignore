@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+codex-ssh-temp/node_modules/
+
+# Build outputs
+dist/
+frontend/dist/
+backend/dist/
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+HANDOFF_SECRETS_LOCAL.md
+HANDOFF_2026-06-14.md
+HANDOFF_*.md
+scripts/.events_sync.env
+deploy_animap_temp_ed25519
+deploy_animap_temp_ed25519.pub
+*.pem
+*.key
+*.p12
+
+# Local tooling / agent config (do not publish)
+.claude/
+.mcp.json
+
+# Deployment/temp artifacts
+codex-ssh-temp/
+.codex-ssh-temp/
+*.tar.gz
+*.tgz
+scripts/venv/
+scripts/.venv-events-sync/
+**/__pycache__/
+*.pyc
+
+# Local source files copied into the repo root during asset import
+/QQ.svg
+
+# Logs and traces
+*.log
+*.trace
+*trace*.json
+frontend/screenshots/
+
+# Local preview screenshots
+frontend/*.png
+codex-ssh-temp/*.png
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 本地素材 / 备份 / 打包目录（开源仓库不含）
+backups/
+素材文件/
+AniMap_B站会员购爬虫包/
+
+# AI 助手本地工作区 / 本地演示图片（不入开源仓库）
+.zcode/
+backend/public/uploads/

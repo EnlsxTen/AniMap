@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23F97316'><polygon points='12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#059669" />
+    <title>AniMap - ACG展会聚合平台</title>
+    <meta name="description" content="AniMap 是 ACG 展会聚合平台，在地图上展示全国漫展、Cosplay、宅舞等二次元活动与场馆，帮你发现附近正在举办的展会和组局。" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://animap.top/" />
+    <!-- Open Graph：微信 / QQ / Twitter 等分享时显示的卡片 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AniMap" />
+    <meta property="og:title" content="AniMap - ACG展会聚合平台" />
+    <meta property="og:description" content="在地图上发现附近的漫展、Cosplay、宅舞等二次元活动与场馆，找到最近的展会和组局。" />
+    <meta property="og:url" content="https://animap.top/" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="AniMap - ACG展会聚合平台" />
+    <meta name="twitter:description" content="在地图上发现附近的漫展、Cosplay、宅舞等二次元活动与场馆，找到最近的展会和组局。" />
+    <script>
+      // 主题初始化（防止闪烁）
+      (function () {
+        try {
+          var mode = localStorage.getItem('themeMode') || localStorage.getItem('theme') || 'auto';
+          var hour = new Date().getHours();
+          var theme = mode === 'auto' ? (hour >= 18 || hour < 6 ? 'dark' : 'light') : mode;
+          if (theme === 'dark') document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

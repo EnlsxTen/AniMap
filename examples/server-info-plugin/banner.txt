@@ -1,0 +1,1 @@
+AniMap .ami 插件演示附属文件 — 插件可通过 ctx.paths.pluginDir 读取包内资源。
