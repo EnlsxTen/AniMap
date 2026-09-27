@@ -204,6 +204,15 @@ flowchart LR
 2. 新功能请附上简要说明与截图
 3. 新增后台能力请优先做成插件，而不是塞进核心路由
 
+## 💬 联系方式
+
+<p align="left">
+  <img src="素材文件/QQ.svg" width="22" alt="QQ" />
+  &nbsp;<b>QQ</b>：<b>3386579857</b>
+</p>
+
+交流合作、问题反馈、部署求助都可以直接加 QQ 联系（添加请备注来意）。
+
 ## 📄 License
 
 [AGPL-3.0](LICENSE) © 2026 AniMap Contributors
