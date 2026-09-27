@@ -15,7 +15,7 @@
 
 | 服务 | 生产用途 | 部署脚本处理 |
 | --- | --- | --- |
-| Node.js 18 / npm | 后端构建和运行、前端构建 | `deploy-with-offsite.sh` 检查版本，不足时安装 Node.js 18 |
+| Node.js 18 / npm | 后端构建和运行、前端构建 | `deploy.sh` 检查版本，不足时安装 Node.js 18 |
 | PM2 | 管理 `animap-backend` 后端进程 | 自动安装、重启、`pm2 save`、设置 systemd startup |
 | Nginx | HTTPS 入口、前端静态文件、`/api` 反代、`/uploads` 静态缓存 | 默认只安装和启动；设置 `CONFIGURE_NGINX=1` 才重写站点配置 |
 | Certbot / Let's Encrypt | `animap.top` 和 `www.animap.top` HTTPS 证书 | 默认不申请证书；设置 `ENABLE_CERTBOT=1` 时配合 Nginx 写入证书 |
@@ -23,8 +23,8 @@
 | Redis 7 | 公开读接口缓存 | 自动安装和启动；写入 `REDIS_ENABLED=true` 和 `REDIS_URL=redis://127.0.0.1:6379` |
 | Python 3.12 + venv | B站会员购同步脚本运行环境 | 自动创建 `scripts/venv` 并安装 Python 依赖 |
 | Playwright Chromium | B站动态页面兜底渲染解析 | 默认安装，可用 `BILIBILI_INSTALL_PLAYWRIGHT=0` 跳过 |
-| Cron | B站同步、异地备份、异地校验 | 自动写入 `/etc/cron.d/animap-events-sync` 和 `/etc/cron.d/animap-offsite-backup` |
-| rsync + zstd + OpenSSH | 异地备份传输、压缩、校验 | 自动安装并配置备份脚本 |
+| 插件内置调度 | B站同步、异地备份、AI 简介回填、数据体检 | 无需系统 cron，由后端插件运行时自行调度 |
+| OpenSSH | 异地备份插件连接备份主机（SSH/SFTP 密码认证） | 仅备份主机侧需要开启 SSH；生产机无需额外配置 |
 | UFW | 防火墙 | 默认不改；设置 `CONFIGURE_UFW=1` 才开放 SSH/80/443 并启用 |
 
 ## Node 应用技术栈
@@ -116,36 +116,37 @@ Redis 只作为公开读接口加速层，PostgreSQL 仍然是唯一真实数据
 生产脚本目录：`/var/www/animap/scripts/`
 
 - `sync_events.py`：抓取 B站会员购活动并导入 AniMap 数据库
-- `setup_cron.sh`：安装 Python 依赖和 cron 的辅助脚本
 - `venv/`：Python 虚拟环境，运行时产物，不提交 Git
 - `.events_sync.env`：生产同步配置，包含密钥，不提交 Git
 - 日志：`/var/log/animap/events_sync.log`
-- cron：`/etc/cron.d/animap-events-sync`
 
-生产后端也可以通过站点设置手动触发 B站同步，使用：
+调度由 **B站漫展同步插件** 承担（管理页「插件管理 → B站漫展同步」）：开启后每天 03:00 自动同步，
+也可在插件卡片手动触发。插件设置对应：
 
 ```text
-BILIBILI_SYNC_SCRIPT=/var/www/animap/scripts/sync_events.py
-BILIBILI_SYNC_PYTHON=/var/www/animap/scripts/venv/bin/python
-BILIBILI_SYNC_ENV_FILE=/var/www/animap/scripts/.events_sync.env
+脚本路径 = /var/www/animap/scripts/sync_events.py
+Python 解释器 = /var/www/animap/scripts/venv/bin/python
 ```
+
+旧版 `setup_cron.sh` 与 `/etc/cron.d/animap-events-sync` 已由插件内置调度取代，新部署无需安装。
 
 ## 异地容灾
 
-异地容灾详见 [OFFSITE_DISASTER_RECOVERY.md](OFFSITE_DISASTER_RECOVERY.md)。核心生产文件：
+异地容灾由 **offsite-backup 插件** 承担：在管理页配置备份主机的 SSH 地址、端口与账号密码，
+测试连通后自动部署备份接收程序，每日 03:30 打包数据库与配置经 SFTP 推送，按保留天数自动清理。
 
-- `/var/www/animap/scripts/offsite_backup.sh`
-- `/var/www/animap/scripts/offsite_verify_uploads.sh`
-- `/etc/cron.d/animap-offsite-backup`
-- `/root/.ssh/animap_offsite_backup_ed25519`，私钥不入库
+详见 [OFFSITE_DISASTER_RECOVERY.md](OFFSITE_DISASTER_RECOVERY.md)。旧版
+`deploy-with-offsite.sh`、`offsite_backup.sh`、`offsite_verify_uploads.sh` 与
+`/etc/cron.d/animap-offsite-backup` 已从仓库移除，新部署不再需要。
 
 当前一键入口：
 
 ```bash
-sudo ./deploy-with-offsite.sh
+sudo ./deploy.sh
 ```
 
-默认行为是保守刷新：安装缺失技术栈、保留生产 `.env`、保留 uploads、迁移前备份数据库、更新构建、刷新 B站同步和异地备份脚本。会修改 Nginx/UFW/证书的动作必须显式打开对应环境变量。
+默认行为是保守刷新：安装缺失技术栈、保留生产 `.env`、保留 uploads、迁移前备份数据库、更新构建。
+会修改 Nginx/UFW/证书的动作必须显式打开对应环境变量。
 
 ## 生产同步记录
 

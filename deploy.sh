@@ -379,6 +379,27 @@ pm2 save
 ok "后端运行中"
 
 # ----------------------------------------
+# 7.5 B站同步插件 Python 环境（供 sync_events.py 使用）
+# ----------------------------------------
+log "准备 B站同步 Python 环境..."
+if ! command -v python3 >/dev/null 2>&1; then
+  apt-get install -y python3 python3-venv python3-pip >/dev/null
+fi
+BILIBILI_VENV_DIR="${BILIBILI_VENV_DIR:-$APP_DIR/scripts/venv}"
+if [ ! -x "$BILIBILI_VENV_DIR/bin/python" ]; then
+  mkdir -p "$(dirname "$BILIBILI_VENV_DIR")"
+  python3 -m venv "$BILIBILI_VENV_DIR"
+  "$BILIBILI_VENV_DIR/bin/python" -m pip install --upgrade pip setuptools wheel >/dev/null
+fi
+"$BILIBILI_VENV_DIR/bin/pip" install --quiet --disable-pip-version-check requests beautifulsoup4 psycopg2-binary pillow
+if [ "${BILIBILI_INSTALL_PLAYWRIGHT:-1}" != "0" ]; then
+  "$BILIBILI_VENV_DIR/bin/pip" install --quiet --disable-pip-version-check playwright
+  "$BILIBILI_VENV_DIR/bin/python" -m playwright install chromium >/dev/null 2>&1 \
+    || warn "Playwright Chromium 安装失败，B站动态页面兜底渲染不可用（不影响主流程）"
+fi
+ok "B站同步 Python 环境就绪：$BILIBILI_VENV_DIR"
+
+# ----------------------------------------
 # 8. 构建前端
 # ----------------------------------------
 log "安装前端依赖..."

@@ -34,24 +34,16 @@ module.exports = function createBilibiliSyncPlugin() {
     if (process.env.BILIBILI_SYNC_PYTHON) return process.env.BILIBILI_SYNC_PYTHON;
 
     const scriptDir = path.dirname(await resolveScriptPath());
-    // Windows 下 venv 布局是 Scripts/python.exe，且系统命令通常只有 python（python3 多为不可 spawn 的 Store 别名）
-    const candidates = process.platform === 'win32'
-      ? [
-          path.join(scriptDir, 'venv/Scripts/python.exe'),
-          path.join(scriptDir, '.venv-events-sync/Scripts/python.exe'),
-          'python',
-          'python3',
-        ]
-      : [
-          path.join(scriptDir, 'venv/bin/python'),
-          path.join(scriptDir, '.venv-events-sync/bin/python'),
-          'python3',
-          'python',
-        ];
-    // 注意：Windows 的 path.join 产生反斜杠路径，"裸命令"判断必须同时排除两种分隔符，
-    // 否则 venv 候选会被当成命令直接选中，跳过存在性检查导致 spawn ENOENT
-    const isBareCommand = (candidate) => !candidate.includes('/') && !candidate.includes('\\');
-    return candidates.find((candidate) => isBareCommand(candidate) || fs.existsSync(candidate)) || 'python';
+    const candidates = [
+      path.join(scriptDir, 'venv/bin/python'),
+      path.join(scriptDir, '.venv-events-sync/bin/python'),
+      'python3',
+      'python',
+    ];
+    // 候选既可能是绝对路径也可能是"裸命令"（如 python3），只对前者做存在性检查，
+    // 否则裸命令会被当成不存在的文件直接跳过
+    const isBareCommand = (candidate) => !candidate.includes('/');
+    return candidates.find((candidate) => isBareCommand(candidate) || fs.existsSync(candidate)) || 'python3';
   };
 
   // 环境变量组装：进程 env → 脚本目录 .events_sync.env → 默认值

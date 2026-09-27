@@ -191,7 +191,7 @@ const createOffsiteBackupPlugin = (): AnimapPlugin => {
     });
 
   const resolvePgDump = (): string | null => {
-    const name = process.platform === 'win32' ? 'pg_dump.exe' : 'pg_dump';
+    const name = 'pg_dump';
     const embeddedRoots = [
       path.join(ctx.paths.projectRoot, 'node_modules', '@embedded-postgres'),
       path.join(ctx.paths.projectRoot, 'backend', 'node_modules', '@embedded-postgres'),
@@ -210,7 +210,7 @@ const createOffsiteBackupPlugin = (): AnimapPlugin => {
 
   const runNode = (command: string, args: string[], env: NodeJS.ProcessEnv = {}, timeoutMs = 20 * 60 * 1000, cwd?: string): Promise<{ code: number | null; stdout: string; stderr: string }> =>
     new Promise((resolve, reject) => {
-      execFile(command, args, { env: { ...process.env, ...env }, timeout: timeoutMs, maxBuffer: 32 * 1024 * 1024, windowsHide: true, cwd }, (err, stdout, stderr) => {
+      execFile(command, args, { env: { ...process.env, ...env }, timeout: timeoutMs, maxBuffer: 32 * 1024 * 1024, cwd }, (err, stdout, stderr) => {
         if (err && typeof (err as NodeJS.ErrnoException).code !== 'string') {
           // 非 spawn 失败（退出码非零）也带 stdout/stderr 返回，由调用方决定语义
           resolve({ code: (err as { code?: number }).code ?? 1, stdout: String(stdout), stderr: String(stderr) });
@@ -284,18 +284,17 @@ const createOffsiteBackupPlugin = (): AnimapPlugin => {
     }
 
     // 2) 打包：db.dump + backend/.env（可选 uploads）
-    //    以 staging 为工作目录、归档用相对文件名：GNU tar 会把 "-f C:\..." 当成远程主机
+    //    以 staging 为工作目录、归档用相对文件名，保持归档内路径干净
     const archivePath = path.join(staging, archiveName);
-    const posix = (p: string) => p.replace(/\\/g, '/');
     const envPath = await (async () => {
       const candidate = path.join(ctx.paths.projectRoot, 'backend', '.env');
       return (await pathExists(candidate)) ? candidate : path.join(ctx.paths.projectRoot, '.env');
     })();
     const tarArgs: string[] = ['-czf', archiveName];
     if (dbIncluded) tarArgs.push('db.dump');
-    if (await pathExists(envPath)) tarArgs.push('-C', posix(path.dirname(envPath)), path.basename(envPath));
+    if (await pathExists(envPath)) tarArgs.push('-C', path.dirname(envPath), path.basename(envPath));
     if (config.includeUploads) {
-      tarArgs.push('-C', posix(path.dirname(ctx.paths.uploadDir)), path.basename(ctx.paths.uploadDir));
+      tarArgs.push('-C', path.dirname(ctx.paths.uploadDir), path.basename(ctx.paths.uploadDir));
     }
     const tarResult = await runNode('tar', tarArgs, {}, 30 * 60 * 1000, staging);
     if (tarResult.code !== 0) {

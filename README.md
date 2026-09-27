@@ -57,6 +57,7 @@
 
 ### 准备工作
 
+- 操作系统：**服务器部署面向 Ubuntu**（20.04 / 22.04 / 24.04 LTS，一键脚本基于 apt + systemd）；本地开发命令均为 bash，以 Ubuntu 为例
 - Node.js ≥ 18
 - PostgreSQL ≥ 14（本地装好，或用 Docker：
   `docker run -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:16`）
@@ -188,11 +189,11 @@ flowchart LR
 │   ├── src/plugins/         # 插件运行时（context / registry / loader / routes）
 │   ├── src/routes/          # REST 路由（auth / events / venues / sessions ...）
 │   ├── src/database/        # 建表与幂等迁移
-│   └── scripts/             # 演示数据 / mock SSH 服务端 / R2 对账
+│   └── scripts/             # 演示数据 / R2 对账
 ├── examples/                # .ami 插件示例包（bilibili-sync、server-info）
 ├── docs/                    # 插件开发指南 / 生产架构 / 异地容灾手册
-├── scripts/                 # B站爬虫（sync_events.py）等独立脚本
-├── deploy.sh                # 一键部署
+├── scripts/                 # B站爬虫（sync_events.py）、AI 简介回填脚本
+├── deploy.sh                # Ubuntu 一键部署
 └── update-app.sh            # 增量更新
 ```
 
